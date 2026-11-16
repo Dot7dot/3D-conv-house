@@ -6,8 +6,9 @@
 3D-conv-house 只當作統一的入口與 UI：
 
 ```
-                       ┌── 🃏 卡片 ── Dot7dot/card-uploader   ✅ 已上線
-3D-conv-house (UI) ────┼── 🎩 帽子 ── Dot7dot/3D-conv-hat     ⏳ 即將推出
+                       ┌── 🃏 卡片 ──────── Dot7dot/card-uploader        ✅ 已上線（API）
+                       ├── 🧍 角色 / 物件 ─ Dot7dot/char-3d-converter-  ✅ 已上線（嵌入網頁）
+3D-conv-house (UI) ────┼── 🎩 帽子 ──────── Dot7dot/3D-conv-hat          ⏳ 即將推出
                        └── 📕 書本 ── Dot7dot/3D-conv-book    ⏳ 即將推出
 ```
 
@@ -58,10 +59,26 @@ npm start            # 打開 http://localhost:4000
 | `id` | 小寫英數與 `-`，也用在 `CONVERTER_<ID>_URL` |
 | `name` / `icon` | ITEMS 下拉選單顯示的名稱 |
 | `repo` | GitHub repo，顯示在說明區 |
-| `url` | 轉換器的網站根網址；`null` 代表「即將推出」，選單裡會顯示但無法選 |
+| `type` | `api`（預設）或 `embed`，見下方 |
+| `url` | 轉換器的網站根網址（`embed` 為網頁網址）；`null` 代表「即將推出」，選單裡會顯示但無法選 |
+| `description` | 選填，`embed` 轉換器顯示在 ITEMS 旁的說明 |
 | `path` | 轉換 API 的路徑，預設 `/api/convert` |
 
 UI 完全依照轉換器回傳的 manifest 產生，新增物件**不需要改 3D-conv-house 的程式**。
+
+### 兩種轉換器
+
+| `type` | 說明 | 例子 |
+| --- | --- | --- |
+| `api`（預設） | 實作下面的 `3d-conv/1` 協定，上傳區與設定由 3D-conv-house 依 manifest 產生 | 🃏 卡片（card-uploader） |
+| `embed` | 已經是完整的網頁（例如 GitHub Pages），選到時直接嵌在 3D-conv-house 裡操作，`url` 填該網頁網址 | 🧍 角色 / 物件（[char-3d-converter-](https://dot7dot.github.io/char-3d-converter-/)） |
+
+```json
+{ "id": "char", "type": "embed", "name": "角色 / 物件", "icon": "🧍", "repo": "Dot7dot/char-3d-converter-",
+  "url": "https://dot7dot.github.io/char-3d-converter-/", "description": "顯示在 ITEMS 旁的說明" }
+```
+
+嵌入的網頁在切換到其他物件再切回來時會保留原本的進度；網頁右上的「匯出」可以直接下載 3D 檔。
 
 ## 轉換器協定 `3d-conv/1`
 

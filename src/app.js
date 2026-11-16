@@ -21,7 +21,13 @@ const envKey = (id) => `CONVERTER_${id.toUpperCase().replace(/[^A-Z0-9]/g, '_')}
  * Reads converters.json. Each entry is one converter repo; an entry without a
  * URL is listed in the UI as "coming soon". The URL can be overridden per
  * deployment with CONVERTER_<ID>_URL.
+ *
+ * type "api" (default): the converter speaks 3d-conv/1 and the UI is built from its manifest.
+ * type "embed": the converter is a complete web app (e.g. a GitHub Pages site)
+ *               that is shown inside 3D-conv-house as-is.
  */
+const TYPES = new Set(['api', 'embed']);
+
 function loadRegistry({ file, entries, env = process.env }) {
   const list = entries ?? JSON.parse(fs.readFileSync(file, 'utf8'));
   if (!Array.isArray(list)) throw new Error('converters.json 必須是陣列');
@@ -31,17 +37,23 @@ function loadRegistry({ file, entries, env = process.env }) {
     if (!/^[a-z0-9-]+$/.test(id)) throw new Error(`轉換器 id 只能用小寫英數與 -：「${raw.id}」`);
     if (seen.has(id)) throw new Error(`轉換器 id 重複：${id}`);
     seen.add(id);
+    const type = raw.type || 'api';
+    if (!TYPES.has(type)) throw new Error(`轉換器 ${id} 的 type 只能是 api 或 embed`);
     // An empty variable (e.g. an unset GitHub Actions variable) means "not set".
-    const url = (env[envKey(id)]?.trim() || raw.url || '').trim().replace(/\/+$/, '');
+    let url = (env[envKey(id)]?.trim() || raw.url || '').trim();
     if (url && !/^https?:\/\//.test(url)) throw new Error(`${envKey(id)} 必須是 http(s) 網址：${url}`);
+    // An embedded page keeps its URL exactly (GitHub Pages wants the trailing slash).
+    if (type === 'api') url = url.replace(/\/+$/, '');
     return {
       id,
+      type,
       name: String(raw.name || id),
       icon: raw.icon || '📦',
       repo: raw.repo || null,
+      description: raw.description || null,
       url: url || null,
       path: raw.path || DEFAULT_PATH,
-      endpoint: url ? url + (raw.path || DEFAULT_PATH) : null,
+      endpoint: type === 'api' && url ? url + (raw.path || DEFAULT_PATH) : null,
     };
   });
 }
@@ -78,6 +90,7 @@ function createApp(options = {}) {
   const converterFor = (req) => {
     const c = byId.get(req.params.id);
     if (!c) throw new HttpError(404, '沒有這個轉換器');
+    if (c.type === 'embed') throw new HttpError(400, `「${c.name}」是嵌入式網頁，請直接在頁面中操作`);
     if (!c.endpoint) throw new HttpError(503, `「${c.name}」轉換器還沒有上線`);
     return c;
   };
@@ -91,7 +104,17 @@ function createApp(options = {}) {
   api.get('/health', (req, res) => res.json({ ok: true }));
 
   api.get('/converters', (req, res) => {
-    res.json(converters.map(({ id, name, icon, repo, endpoint }) => ({ id, name, icon, repo, available: Boolean(endpoint) })));
+    res.json(converters.map(({ id, type, name, icon, repo, description, url }) => ({
+      id,
+      type,
+      name,
+      icon,
+      repo,
+      description,
+      available: Boolean(url),
+      // Only an embedded page's URL is shown to the browser; API converters stay behind the proxy.
+      ...(type === 'embed' ? { url } : {}),
+    })));
   });
 
   api.get('/converters/:id/manifest', async (req, res) => {

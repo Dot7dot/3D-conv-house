@@ -8,6 +8,15 @@
     "path": "/api/convert"
   },
   {
+    "id": "char",
+    "type": "embed",
+    "name": "角色 / 物件",
+    "icon": "🧍",
+    "repo": "Dot7dot/char-3d-converter-",
+    "url": "https://dot7dot.github.io/char-3d-converter-/",
+    "description": "Char3D Converter：上傳自己畫的 2D 圖片，轉成 3D 三頭身角色或 3D 物件，可以匯出 GLB、glTF、OBJ、STL、USDZ、Sprite Sheet 與遊戲套件 ZIP。所有轉換都在瀏覽器內完成。"
+  },
+  {
     "id": "hat",
     "name": "帽子",
     "icon": "🎩",

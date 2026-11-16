@@ -16,7 +16,7 @@ const root = path.join(__dirname, '..');
 const out = path.resolve(process.argv[2] || path.join(root, '_site'));
 
 const converters = loadRegistry({ file: path.join(root, 'converters.json') })
-  .map(({ id, name, icon, repo, url, path: p }) => ({ id, name, icon, repo, url, path: p }));
+  .map(({ id, type, name, icon, repo, description, url, path: p }) => ({ id, type, name, icon, repo, description, url, path: p }));
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.cpSync(path.join(root, 'public'), out, { recursive: true });

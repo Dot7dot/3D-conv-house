@@ -24,6 +24,11 @@ const els = {
   endpointForm: $('endpointForm'),
   endpointInput: $('endpointInput'),
   endpointReset: $('endpointReset'),
+  embedInfo: $('embedInfo'),
+  embedDescription: $('embedDescription'),
+  embedRepo: $('embedRepo'),
+  embedOpen: $('embedOpen'),
+  embedWrap: $('embedWrap'),
 };
 
 // 'server': talk to the Node server's /api/converters (npm start).
@@ -51,6 +56,7 @@ const state = {
   resultUrl: null,
   loadToken: 0,
   busy: false,
+  frames: {}, // embedded converter id → <iframe>, kept so switching back keeps the work
 };
 
 /* ---------- Talking to converters ---------- */
@@ -127,7 +133,11 @@ async function loadConverters() {
     els.item.add(opt);
   }
   const saved = store.get();
+  // A first-time visitor of the Pages site starts on a converter that is online,
+  // not one that only works when it runs on their own computer.
+  const local = (c) => c.type !== 'embed' && /^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(c.url || '');
   const initial = state.converters.find((c) => c.available && c.id === saved)
+    || (STATIC && state.converters.find((c) => c.available && !local(c)))
     || state.converters.find((c) => c.available);
   if (initial) {
     els.item.value = initial.id;
@@ -153,6 +163,11 @@ async function selectConverter(id) {
   els.details.hidden = true;
   els.settings.hidden = true;
   setStatus('');
+  if (converter.type === 'embed') {
+    showEmbed(converter);
+    return;
+  }
+  hideEmbed();
   setWorkEmpty(`正在連線到「${converter.name}」轉換器…`);
   if (STATIC) {
     els.endpointBox.hidden = false;
@@ -179,6 +194,40 @@ async function selectConverter(id) {
   } finally {
     clearTimeout(slow);
   }
+}
+
+/* ---------- Embedded converters (complete web apps) ---------- */
+
+function showEmbed(c) {
+  document.body.classList.add('embed-mode');
+  els.manifestState.hidden = true;
+  els.endpointBox.hidden = true;
+  els.workEmpty.hidden = true;
+  els.uploads.hidden = true;
+
+  els.embedDescription.textContent = c.description || '';
+  els.embedDescription.hidden = !c.description;
+  els.embedRepo.textContent = c.repo || new URL(c.url).host;
+  els.embedRepo.href = c.repo ? `https://github.com/${c.repo}` : c.url;
+  els.embedOpen.href = c.url;
+  els.embedInfo.hidden = false;
+
+  if (!state.frames[c.id]) {
+    const frame = document.createElement('iframe');
+    frame.src = c.url;
+    frame.title = `${c.name} 轉換器`;
+    frame.allow = 'fullscreen; clipboard-read; clipboard-write; xr-spatial-tracking';
+    els.embedWrap.append(frame);
+    state.frames[c.id] = frame;
+  }
+  for (const [id, frame] of Object.entries(state.frames)) frame.hidden = id !== c.id;
+  els.embedWrap.hidden = false;
+}
+
+function hideEmbed() {
+  document.body.classList.remove('embed-mode');
+  els.embedInfo.hidden = true;
+  els.embedWrap.hidden = true;
 }
 
 async function fetchManifest(c) {
