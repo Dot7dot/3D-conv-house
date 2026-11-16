@@ -106,8 +106,11 @@ test('the shipped converters.json lists card (live) plus hat and book (coming so
   assert.match((await res.json()).error, /嵌入式/);
   const page = await fetch(base);
   assert.match(await page.text(), /3D 轉換屋/);
-  const viewer = await fetch(`${base}/vendor/model-viewer.min.js`);
+  const viewer = await fetch(`${base}/assets/vendor/model-viewer.min.js`);
   assert.equal(viewer.status, 200);
+  for (const hidden of ['/src/app.js', '/package.json', '/converters.json', '/assets/../src/app.js']) {
+    assert.equal((await fetch(`${base}${hidden}`)).status, 404, `${hidden} must not be served`);
+  }
 });
 
 test('manifest and convert are proxied to the converter repo', async (t) => {

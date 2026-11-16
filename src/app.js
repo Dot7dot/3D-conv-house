@@ -187,12 +187,10 @@ function createApp(options = {}) {
   api.use((req, res) => res.status(404).json({ error: '找不到這個 API' }));
   app.use('/api', api);
 
-  // 3D preview component, served locally so the page works without a CDN.
-  const modelViewerDir = path.dirname(require.resolve('@google/model-viewer/dist/model-viewer.min.js'));
-  app.get('/vendor/model-viewer.min.js', (req, res) => {
-    res.sendFile(path.join(modelViewerDir, 'model-viewer.min.js'), { maxAge: '7d' });
-  });
-  app.use(express.static(path.join(__dirname, '..', 'public')));
+  // The same files GitHub Pages serves: index.html at the repo root, everything else in assets/.
+  const root = path.join(__dirname, '..');
+  app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(root, 'index.html')));
+  app.use('/assets', express.static(path.join(root, 'assets'), { maxAge: '1h' }));
 
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {

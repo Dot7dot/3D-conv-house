@@ -132,23 +132,21 @@ UI 完全依照轉換器回傳的 manifest 產生，新增物件**不需要改 3
 
 ## GitHub Pages（靜態網站）
 
-推送到 `main` 時，`.github/workflows/pages.yml` 會自動把 UI 建置成靜態網站，發布到 `gh-pages` 分支：
+這個 repo 的 `main` 分支本身就是網站，**沒有建置步驟**：合併到 `main` 後 GitHub Pages 會自動更新。
 
 **https://dot7dot.github.io/3D-conv-house/**
 
-GitHub Pages 不能執行 Node 伺服器，所以 Pages 版本由**瀏覽器直接呼叫轉換器**（card-uploader 已開放 CORS），轉換器必須另外部署（例如 Render）：
+（Settings → Pages：Source = **Deploy from a branch**，Branch = `main` / `(root)`）
 
-1. 依照 card-uploader 的 README 把它部署到 Render，記下網址（例如 `https://card-uploader.onrender.com`）
-2. 到這個 repo → **Settings → Secrets and variables → Actions → Variables** 新增 `CONVERTER_CARD_URL`，值填上面的網址
-3. 到 **Actions → Deploy to GitHub Pages → Run workflow** 重新發布
+GitHub Pages 不能執行 Node 伺服器，網頁會自動偵測：讀不到 `/api/converters` 時改讀 `converters.json`，由**瀏覽器直接呼叫轉換器**。
 
-沒設定時，卡片轉換器預設是 `http://localhost:3000`：在自己電腦上 `npm start` 啟動 card-uploader 也能直接用 Pages 網頁轉換。
-網頁上「轉換器網址」也可以臨時改成別的網址（只存在該瀏覽器）。
-
-> 第一次發布後若網址打不開，到 **Settings → Pages**，Source 選 **Deploy from a branch**、分支選 `gh-pages` / `(root)`。
+- 🧍 **角色 / 物件**：嵌入 char-3d-converter- 的 GitHub Pages，打開就能用
+- 🃏 **卡片**：需要 card-uploader 在網路上執行（例如 Render，它已開放 CORS）。部署好之後，把 `converters.json` 裡 card 的 `url`
+  改成它的網址（必須是 `https://`）並合併到 `main`。在那之前預設是 `http://localhost:3000`：在自己電腦上啟動 card-uploader
+  也能直接用 Pages 網頁轉換；網頁上的「轉換器網址」也可以臨時改成別的網址（只存在該瀏覽器）
 
 ```bash
-node scripts/build-pages.js _site   # 在本機產生同樣的靜態網站
+python3 -m http.server 8000   # 在本機用和 Pages 一樣的方式開啟：http://localhost:8000
 ```
 
 ## 部署到網路上（Render 免費方案，含伺服器）
@@ -166,12 +164,11 @@ npm test      # 測試（用假的轉換器，不需要啟動 card-uploader）
 
 ```
 converters.json   物件清單：每種物件對應哪個轉換器 repo
-scripts/
-  build-pages.js  產生 GitHub Pages 用的靜態網站
+index.html        UI 頁面（GitHub Pages 與 Node 伺服器共用）
+assets/           UI 的 JS / CSS / 圖示；vendor/ 內是 3D 預覽用的 <model-viewer>（Apache-2.0）
 src/
   server.js       啟動伺服器
   app.js          物件清單、manifest 轉接、轉換轉送
-public/           UI（純 HTML/CSS/JS，無需建置）；3D 預覽使用 <model-viewer>，由伺服器從 node_modules 提供
 test/             API 測試
 render.yaml       Render 部署設定
 ```
