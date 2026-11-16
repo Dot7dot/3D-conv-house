@@ -1,0 +1,24 @@
+[
+  {
+    "id": "card",
+    "name": "卡片",
+    "icon": "🃏",
+    "repo": "Dot7dot/card-uploader",
+    "url": "http://localhost:3000",
+    "path": "/api/convert"
+  },
+  {
+    "id": "hat",
+    "name": "帽子",
+    "icon": "🎩",
+    "repo": "Dot7dot/3D-conv-hat",
+    "url": null
+  },
+  {
+    "id": "book",
+    "name": "書本",
+    "icon": "📕",
+    "repo": "Dot7dot/3D-conv-book",
+    "url": null
+  }
+]
