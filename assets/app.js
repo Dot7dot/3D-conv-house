@@ -31,10 +31,11 @@ const els = {
   embedWrap: $('embedWrap'),
 };
 
-// 'server': talk to the Node server's /api/converters (npm start).
-// 'static': GitHub Pages build; the browser calls each converter directly.
-const CONFIG = window.CONV_HOUSE || { mode: 'server' };
-const STATIC = CONFIG.mode === 'static';
+// Two ways to run, detected on load:
+// - server: the Node server (npm start) answers /api/converters and proxies converters.
+// - static: GitHub Pages serves the repo as files; the browser reads converters.json
+//           and calls each converter directly.
+let STATIC = false;
 
 const STORE_KEY = 'conv-house:item';
 const store = {
@@ -112,11 +113,35 @@ function clearFiles() {
 
 /* ---------- Converter list (ITEMS) ---------- */
 
+async function fetchConverterList() {
+  try {
+    const res = await fetch('api/converters', { headers: { accept: 'application/json' } });
+    const list = res.ok ? await res.json() : null;
+    if (Array.isArray(list)) return list;
+  } catch { /* no server: static hosting */ }
+
+  STATIC = true;
+  const raw = await (await api('converters.json', { cache: 'no-cache' })).json();
+  return raw.map((c) => {
+    const type = c.type || 'api';
+    const url = (c.url || '').trim();
+    return {
+      id: c.id,
+      type,
+      name: c.name || c.id,
+      icon: c.icon || '📦',
+      repo: c.repo || null,
+      description: c.description || null,
+      url: type === 'embed' ? url : url.replace(/\/+$/, ''),
+      path: c.path || '/api/convert',
+      available: Boolean(url),
+    };
+  });
+}
+
 async function loadConverters() {
   try {
-    state.converters = STATIC
-      ? CONFIG.converters.map((c) => ({ ...c, available: Boolean(c.url) }))
-      : await (await api('api/converters')).json();
+    state.converters = await fetchConverterList();
   } catch (err) {
     els.item.innerHTML = '<option>無法載入</option>';
     els.item.disabled = true;
