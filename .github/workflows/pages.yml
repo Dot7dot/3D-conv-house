@@ -1,0 +1,48 @@
+# 每次推送到 main，就把 UI 建置成靜態網站並發布到 GitHub Pages（gh-pages 分支）。
+# 卡片轉換器網址：到 repo → Settings → Secrets and variables → Actions → Variables
+# 新增 CONVERTER_CARD_URL（例如 https://card-uploader.onrender.com），再重新執行這個 workflow。
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Build static site
+        env:
+          CONVERTER_CARD_URL: ${{ vars.CONVERTER_CARD_URL }}
+          CONVERTER_HAT_URL: ${{ vars.CONVERTER_HAT_URL }}
+          CONVERTER_BOOK_URL: ${{ vars.CONVERTER_BOOK_URL }}
+        run: node scripts/build-pages.js _site
+
+      - name: Publish to gh-pages branch
+        working-directory: _site
+        run: |
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

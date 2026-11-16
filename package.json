@@ -1,0 +1,20 @@
+{
+  "name": "3d-conv-house",
+  "version": "1.0.0",
+  "description": "3D 轉換屋：選擇物件種類、上傳圖片，呼叫對應的轉換器 repo 產生可以下載的 3D 遊戲物件（.glb）。",
+  "main": "src/server.js",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@google/model-viewer": "^4.1.0",
+    "express": "^5.3.0"
+  }
+}

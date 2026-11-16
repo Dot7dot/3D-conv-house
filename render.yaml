@@ -1,0 +1,16 @@
+# Render Blueprint：在 Render 選 New → Blueprint，連到這個 repo 即可部署。
+services:
+  - type: web
+    name: 3d-conv-house
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # 卡片轉換器（card-uploader）的網址，例如 https://card-uploader.onrender.com
+      - key: CONVERTER_CARD_URL
+        sync: false
