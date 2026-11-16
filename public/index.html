@@ -7,7 +7,7 @@
   <meta name="description" content="選擇物件種類、上傳圖片，轉換成可以放進遊戲的 3D 物件（.glb）">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
-  <script type="module" src="/vendor/model-viewer.min.js"></script>
+  <script type="module" src="vendor/model-viewer.min.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -28,6 +28,18 @@
       </label>
 
       <div id="manifestState" class="state" hidden></div>
+
+      <details id="endpointBox" class="endpoint" hidden>
+        <summary>轉換器網址</summary>
+        <form id="endpointForm">
+          <input id="endpointInput" type="url" placeholder="https://card-uploader.onrender.com" autocomplete="url" spellcheck="false">
+          <div class="endpoint-actions">
+            <button class="btn" type="submit">套用</button>
+            <button id="endpointReset" class="link" type="button">恢復預設</button>
+          </div>
+          <small class="muted">填入轉換器（例如 card-uploader）的網址，只會存在這個瀏覽器。</small>
+        </form>
+      </details>
 
       <div id="details" class="instructions" hidden>
         <p id="description" class="muted"></p>
@@ -89,6 +101,7 @@
     </label>
   </template>
 
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

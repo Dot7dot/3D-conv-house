@@ -141,6 +141,14 @@ select:focus-visible, input:focus-visible, .btn:focus-visible, .slot:focus-withi
 }
 .state.error { color: var(--danger); }
 
+.endpoint { font-size: 13px; }
+.endpoint summary { cursor: pointer; color: var(--muted); }
+.endpoint form { display: grid; gap: 8px; margin-top: 8px; }
+.endpoint input { font: inherit; color: inherit; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 40px; width: 100%; }
+.endpoint-actions { display: flex; align-items: center; gap: 12px; }
+.endpoint-actions .btn { min-height: 36px; padding: 6px 14px; }
+.endpoint-actions .link { color: var(--muted); }
+
 .instructions {
   background: var(--panel-2);
   border: 1px solid var(--line);

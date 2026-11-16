@@ -75,6 +75,8 @@ test('registry: env overrides the URL, entries without a URL are "coming soon"',
     'https://hat.example.com/api/convert',
     'https://book.example.com/api/convert',
   ]);
+  const blank = loadRegistry({ entries: [{ id: 'card', url: 'http://localhost:3000' }], env: { CONVERTER_CARD_URL: '' } });
+  assert.equal(blank[0].endpoint, 'http://localhost:3000/api/convert', 'an empty variable keeps the default');
   assert.throws(() => loadRegistry({ entries: [{ id: 'Bad Id' }], env: {} }), /id/);
   assert.throws(() => loadRegistry({ entries: [{ id: 'a' }, { id: 'a' }], env: {} }), /重複/);
   assert.throws(() => loadRegistry({ entries: [{ id: 'a', url: 'ftp://x' }], env: {} }), /http/);

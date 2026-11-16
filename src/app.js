@@ -31,13 +31,16 @@ function loadRegistry({ file, entries, env = process.env }) {
     if (!/^[a-z0-9-]+$/.test(id)) throw new Error(`轉換器 id 只能用小寫英數與 -：「${raw.id}」`);
     if (seen.has(id)) throw new Error(`轉換器 id 重複：${id}`);
     seen.add(id);
-    const url = (env[envKey(id)] ?? raw.url ?? '').trim().replace(/\/+$/, '');
+    // An empty variable (e.g. an unset GitHub Actions variable) means "not set".
+    const url = (env[envKey(id)]?.trim() || raw.url || '').trim().replace(/\/+$/, '');
     if (url && !/^https?:\/\//.test(url)) throw new Error(`${envKey(id)} 必須是 http(s) 網址：${url}`);
     return {
       id,
       name: String(raw.name || id),
       icon: raw.icon || '📦',
       repo: raw.repo || null,
+      url: url || null,
+      path: raw.path || DEFAULT_PATH,
       endpoint: url ? url + (raw.path || DEFAULT_PATH) : null,
     };
   });

@@ -113,7 +113,28 @@ UI 完全依照轉換器回傳的 manifest 產生，新增物件**不需要改 3
 瀏覽器只跟 3D-conv-house 溝通，轉換器的網址不會暴露給使用者，也不用處理 CORS。
 轉換器在免費主機休眠時（例如 Render 閒置 15 分鐘），第一次讀取 manifest 最多等約 75 秒，UI 會顯示「正在喚醒」。
 
-## 部署到網路上（Render 免費方案）
+## GitHub Pages（靜態網站）
+
+推送到 `main` 時，`.github/workflows/pages.yml` 會自動把 UI 建置成靜態網站，發布到 `gh-pages` 分支：
+
+**https://dot7dot.github.io/3D-conv-house/**
+
+GitHub Pages 不能執行 Node 伺服器，所以 Pages 版本由**瀏覽器直接呼叫轉換器**（card-uploader 已開放 CORS），轉換器必須另外部署（例如 Render）：
+
+1. 依照 card-uploader 的 README 把它部署到 Render，記下網址（例如 `https://card-uploader.onrender.com`）
+2. 到這個 repo → **Settings → Secrets and variables → Actions → Variables** 新增 `CONVERTER_CARD_URL`，值填上面的網址
+3. 到 **Actions → Deploy to GitHub Pages → Run workflow** 重新發布
+
+沒設定時，卡片轉換器預設是 `http://localhost:3000`：在自己電腦上 `npm start` 啟動 card-uploader 也能直接用 Pages 網頁轉換。
+網頁上「轉換器網址」也可以臨時改成別的網址（只存在該瀏覽器）。
+
+> 第一次發布後若網址打不開，到 **Settings → Pages**，Source 選 **Deploy from a branch**、分支選 `gh-pages` / `(root)`。
+
+```bash
+node scripts/build-pages.js _site   # 在本機產生同樣的靜態網站
+```
+
+## 部署到網路上（Render 免費方案，含伺服器）
 
 1. 先依照 card-uploader 的 README 部署好卡片轉換器，記下它的網址
 2. 到 [render.com](https://render.com) → **New → Blueprint**，選這個 repo，Render 會讀取 `render.yaml`
@@ -128,6 +149,8 @@ npm test      # 測試（用假的轉換器，不需要啟動 card-uploader）
 
 ```
 converters.json   物件清單：每種物件對應哪個轉換器 repo
+scripts/
+  build-pages.js  產生 GitHub Pages 用的靜態網站
 src/
   server.js       啟動伺服器
   app.js          物件清單、manifest 轉接、轉換轉送

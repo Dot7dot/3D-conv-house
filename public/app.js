@@ -20,12 +20,28 @@ const els = {
   viewer: $('viewer'),
   download: $('download'),
   slotTemplate: $('slotTemplate'),
+  endpointBox: $('endpointBox'),
+  endpointForm: $('endpointForm'),
+  endpointInput: $('endpointInput'),
+  endpointReset: $('endpointReset'),
 };
+
+// 'server': talk to the Node server's /api/converters (npm start).
+// 'static': GitHub Pages build; the browser calls each converter directly.
+const CONFIG = window.CONV_HOUSE || { mode: 'server' };
+const STATIC = CONFIG.mode === 'static';
 
 const STORE_KEY = 'conv-house:item';
 const store = {
   get() { try { return localStorage.getItem(STORE_KEY); } catch { return null; } },
   set(v) { try { localStorage.setItem(STORE_KEY, v); } catch { /* private mode */ } },
+};
+
+// A converter URL the viewer typed in (static mode only), per converter id.
+const urlStore = {
+  key: (id) => `conv-house:url:${id}`,
+  get(id) { try { return localStorage.getItem(this.key(id)); } catch { return null; } },
+  set(id, v) { try { if (v) localStorage.setItem(this.key(id), v); else localStorage.removeItem(this.key(id)); } catch { /* private mode */ } },
 };
 
 const state = {
@@ -37,8 +53,26 @@ const state = {
   busy: false,
 };
 
-async function api(path, init) {
-  const res = await fetch(path, init);
+/* ---------- Talking to converters ---------- */
+
+const baseUrl = (c) => (urlStore.get(c.id) || c.url || '').replace(/\/+$/, '');
+const endpointOf = (c) => (baseUrl(c) ? baseUrl(c) + (c.path || '/api/convert') : null);
+
+function connectError(c) {
+  const base = baseUrl(c);
+  if (location.protocol === 'https:' && /^http:/.test(base) && !/^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(base)) {
+    return new Error(`這個網頁是 https，轉換器網址也必須是 https（目前：${base}）`);
+  }
+  return new Error(`無法連線到「${c.name}」轉換器（${base}），請確認網址正確、轉換器已啟動`);
+}
+
+async function api(path, init, converter) {
+  let res;
+  try {
+    res = await fetch(path, init);
+  } catch (err) {
+    throw converter ? connectError(converter) : err;
+  }
   if (!res.ok) {
     let message = `錯誤 ${res.status}`;
     try { message = (await res.json()).error || message; } catch { /* not JSON */ }
@@ -74,7 +108,9 @@ function clearFiles() {
 
 async function loadConverters() {
   try {
-    state.converters = await (await api('/api/converters')).json();
+    state.converters = STATIC
+      ? CONFIG.converters.map((c) => ({ ...c, available: Boolean(c.url) }))
+      : await (await api('api/converters')).json();
   } catch (err) {
     els.item.innerHTML = '<option>無法載入</option>';
     els.item.disabled = true;
@@ -118,6 +154,10 @@ async function selectConverter(id) {
   els.settings.hidden = true;
   setStatus('');
   setWorkEmpty(`正在連線到「${converter.name}」轉換器…`);
+  if (STATIC) {
+    els.endpointBox.hidden = false;
+    els.endpointInput.value = baseUrl(converter);
+  }
   showManifestState('正在讀取轉換器需要的資料…');
 
   // Free hosting sleeps when idle; tell the user why it is slow.
@@ -126,7 +166,7 @@ async function selectConverter(id) {
   }, 3000);
 
   try {
-    const manifest = await (await api(`/api/converters/${encodeURIComponent(id)}/manifest`)).json();
+    const manifest = await fetchManifest(converter);
     if (token !== state.loadToken) return;
     state.manifest = manifest;
     renderManifest(manifest);
@@ -135,9 +175,23 @@ async function selectConverter(id) {
     if (token !== state.loadToken) return;
     showManifestState(err.message, true);
     setWorkEmpty('轉換器目前無法使用');
+    if (STATIC) els.endpointBox.open = true;
   } finally {
     clearTimeout(slow);
   }
+}
+
+async function fetchManifest(c) {
+  if (!STATIC) return (await api(`api/converters/${encodeURIComponent(c.id)}/manifest`)).json();
+  const res = await api(`${endpointOf(c)}/manifest`, { headers: { accept: 'application/json' } }, c);
+  let m;
+  try {
+    m = await res.json();
+  } catch {
+    throw new Error(`「${c.name}」轉換器回傳的不是 JSON，請確認網址`);
+  }
+  if (m?.protocol !== '3d-conv/1' || !Array.isArray(m.inputs)) throw new Error(`「${c.name}」轉換器不支援 3d-conv/1 協定，請確認網址`);
+  return { ...m, id: c.id, repo: c.repo };
 }
 
 /* ---------- Manifest → instructions, upload slots, options ---------- */
@@ -374,7 +428,9 @@ async function convert() {
   updateConvertButton();
   setStatus('正在產生 3D 物件…');
   try {
-    const res = await api(`/api/converters/${encodeURIComponent(m.id)}/convert`, { method: 'POST', body: form });
+    const converter = state.converters.find((c) => c.id === m.id);
+    const url = STATIC ? endpointOf(converter) : `api/converters/${encodeURIComponent(m.id)}/convert`;
+    const res = await api(url, { method: 'POST', body: form }, STATIC ? converter : null);
     const blob = await res.blob();
     clearResult();
     state.resultUrl = URL.createObjectURL(blob);
@@ -398,6 +454,23 @@ async function convert() {
 }
 
 els.item.addEventListener('change', () => selectConverter(els.item.value));
+
+els.endpointForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const id = els.item.value;
+  const value = els.endpointInput.value.trim().replace(/\/+$/, '');
+  if (!/^https?:\/\/[^/\s]+/.test(value)) {
+    showManifestState('請輸入 http:// 或 https:// 開頭的網址', true);
+    return;
+  }
+  urlStore.set(id, value);
+  els.endpointBox.open = false;
+  selectConverter(id);
+});
+els.endpointReset.addEventListener('click', () => {
+  urlStore.set(els.item.value, null);
+  selectConverter(els.item.value);
+});
 els.convert.addEventListener('click', convert);
 els.options.addEventListener('submit', (e) => {
   e.preventDefault();
