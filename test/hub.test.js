@@ -78,6 +78,10 @@ test('registry: env overrides the URL, entries without a URL are "coming soon"',
   const blank = loadRegistry({ entries: [{ id: 'card', url: 'http://localhost:3000' }], env: { CONVERTER_CARD_URL: '' } });
   assert.equal(blank[0].endpoint, 'http://localhost:3000/api/convert', 'an empty variable keeps the default');
   assert.throws(() => loadRegistry({ entries: [{ id: 'Bad Id' }], env: {} }), /id/);
+  assert.throws(() => loadRegistry({ entries: [{ id: 'x', type: 'magic' }], env: {} }), /type/);
+  const embed = loadRegistry({ entries: [{ id: 'char', type: 'embed', url: 'https://a.example/app/' }], env: {} });
+  assert.equal(embed[0].url, 'https://a.example/app/');
+  assert.equal(embed[0].endpoint, null);
   assert.throws(() => loadRegistry({ entries: [{ id: 'a' }, { id: 'a' }], env: {} }), /重複/);
   assert.throws(() => loadRegistry({ entries: [{ id: 'a', url: 'ftp://x' }], env: {} }), /http/);
 });
@@ -88,8 +92,18 @@ test('the shipped converters.json lists card (live) plus hat and book (coming so
   const base = await listen(server);
   t.after(() => new Promise((r) => server.close(r)));
   const list = await (await fetch(`${base}/api/converters`)).json();
-  assert.deepEqual(list.map((c) => [c.id, c.available]), [['card', true], ['hat', false], ['book', false]]);
+  assert.deepEqual(list.map((c) => [c.id, c.type, c.available]), [
+    ['card', 'api', true], ['char', 'embed', true], ['hat', 'api', false], ['book', 'api', false],
+  ]);
   assert.equal(list[0].endpoint, undefined, 'converter URLs are not exposed');
+  assert.equal(list[0].url, undefined, 'API converter URLs stay behind the proxy');
+  assert.equal(list[1].url, 'https://dot7dot.github.io/char-3d-converter-/', 'an embedded page keeps its trailing slash');
+  assert.equal(list[1].repo, 'Dot7dot/char-3d-converter-');
+
+  // An embedded page has no manifest or convert API.
+  const res = await fetch(`${base}/api/converters/char/manifest`);
+  assert.equal(res.status, 400);
+  assert.match((await res.json()).error, /嵌入式/);
   const page = await fetch(base);
   assert.match(await page.text(), /3D 轉換屋/);
   const viewer = await fetch(`${base}/vendor/model-viewer.min.js`);
